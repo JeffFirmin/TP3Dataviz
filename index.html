@@ -4,16 +4,46 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://lyondataviz.github.io/teaching/lyon1-m2/2021/data/matrixManagement.js"></script>
 
-  <style></style>
+  <style>
+    label,
+    footer {
+      font-family: sans-serif;
+    }
+
+    label {
+      font-size: 1rem;
+      padding-right: 10px;
+    }
+
+    select {
+      font-size: 0.9rem;
+      padding: 2px 5px;
+    }
+
+    footer {
+      font-size: 0.8rem;
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+    }
+  </style>
 </head>
 
 <body>
+  <label for="critere-select">Choisir un critère:</label>
+
+  <select name="pets" id="pet-select">
+    <option value="appearances">Appearances</option>
+    <option value="zones">Zones</option>
+    <option value="influences">Influences</option>
+  </select>
+
   <div id="matrice"></div>
   <script>
     // Definition de la taille du svg
-    const margin = { top: 0, right: 30, bottom: 20, left: 10 },
-      width = 960,
-      height = 960;
+    const margin = { top: 80, right: 0, bottom: 0, left: 80 },
+      width = 1920,
+      height = 1080;
 
     var color = d3
       .scaleQuantize()
@@ -32,7 +62,13 @@
       .then(function (json) {
         data = json;
         //console.log(json.edges);
-        adjacencymatrix = createAdjacencyMatrix(json.nodes, json.links);
+        adjacencymatrix = createAdjacencyMatrix(
+          json.nodes,
+          json.links,
+          undefined,
+          true
+        );
+        var zoneScale = d3.scaleOrdinal(d3.schemeCategory10);
         //console.log(adjacencymatrix);
 
         var maxWeight = d3.max(adjacencymatrix, function (d) {
@@ -51,28 +87,35 @@
           .selectAll("rect")
           .data(adjacencymatrix)
           .join("rect")
-          .attr("width", 5) //TODO
-          .attr("height", 5) //TODO
+          .attr("width", width / json.nodes.length) //TODO
+          .attr("height", height / json.nodes.length) //TODO
           .attr("x", function (d) {
-            return d.x * 5;
+            return (d.x * width) / json.nodes.length;
           })
           .attr("y", function (d) {
-            return d.y * 5;
+            return (d.y * height) / json.nodes.length;
           })
           .style("stroke", "black")
           .style("stroke-width", ".2px")
           .style("fill", function (d) {
-            var value = d.weight;
-            return scale(value);
+            if (d.zone_s == d.zone_t && d.name_s != d.name_t) {
+              return zoneScale(d.zone_s);
+            } else {
+              return "#eee";
+            }
+          })
+          .style("opacity", function (d) {
+            return (d.weight * 10) / 100;
           });
+
         // Question 5
         maxString = d3.max(json.nodes, (d) => d.character.length);
-        var positionsPersonnages = d3.range(json.nodes.length); // un tableau d'autant d'element que de personnages
-        // [0, 1, ..., 106]
+        var positionPersonnages = d3.range(json.nodes.length);
+
         var echellexy = d3
           .scaleBand()
-          .range([0, json.nodes.length]) // TODO correspond [0, largeur du dessin]
-          .domain(positionsPersonnages)
+          .range([0, json.nodes.length])
+          .domain(positionPersonnages)
           .paddingInner(0.1)
           .align(0)
           .round(true);
@@ -80,7 +123,7 @@
         var echelley = d3
           .scaleBand()
           .range([0, (json.nodes.length * height) / json.nodes.length])
-          .domain(positionsPersonnages)
+          .domain(positionPersonnages)
           .paddingInner(0.1)
           .align(0)
           .round(false);
@@ -88,7 +131,7 @@
         var echellex = d3
           .scaleBand()
           .range([0, (json.nodes.length * width) / json.nodes.length])
-          .domain(positionsPersonnages)
+          .domain(positionPersonnages)
           .paddingInner(0.1)
           .align(0)
           .round(false);
@@ -132,12 +175,36 @@
           .attr("dx", -(maxString * 5)) //TODO
           .attr(
             "dy",
-            (d) => echelley(d.id) + height / json.nodes.length / 2 + 4
+            (d) => echelley(d.id) + height / json.nodes.length / 2 + 2
           ); //TODO
       })
       .html((d) => {
         return d.character;
       });
+
+    function update(newPositions) {
+      echellexy.domain(newPositions);
+
+      rows
+        .transition()
+        .delay(0)
+        .duration(1000)
+        .attr("dy", echelley(d.id) + height / json.nodes.length / 2 + 2);
+
+      columns
+        .transition()
+        .delay(0)
+        .duration(1000)
+        .attr("dy", echellex(d.id) + width / json.nodes.length / 2 + 2);
+
+      matrixViz
+        .selectAll("rect")
+        .transition()
+        .delay(0)
+        .duration(1000)
+        .attr("x", echellex(d.id) + width / json.nodes.length / 2 + 2)
+        .attr("y", echelley(d.id) + height / json.nodes.length / 2 + 2);
+    }
 
     // donné par D3
   </script>
