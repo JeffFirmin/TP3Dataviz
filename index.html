@@ -28,91 +28,116 @@
       .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    d3.json("GOT.json").then(function (json) {
-      data = json;
-      //console.log(json.edges);
-      adjacencymatrix = createAdjacencyMatrix(json.nodes, json.links);
-      //console.log(adjacencymatrix);
+    d3.json("GOT.json")
+      .then(function (json) {
+        data = json;
+        //console.log(json.edges);
+        adjacencymatrix = createAdjacencyMatrix(json.nodes, json.links);
+        //console.log(adjacencymatrix);
 
-      var maxWeight = d3.max(adjacencymatrix, function (d) {
-        return d.weight;
+        var maxWeight = d3.max(adjacencymatrix, function (d) {
+          return d.weight;
+        });
+
+        console.log(maxWeight);
+
+        var scale = d3
+          .scaleQuantize()
+          .domain([0, maxWeight]) // TODO
+          .range(d3.schemeBlues[9]);
+
+        // Question 4:
+        matrixViz = svg
+          .selectAll("rect")
+          .data(adjacencymatrix)
+          .join("rect")
+          .attr("width", 5) //TODO
+          .attr("height", 5) //TODO
+          .attr("x", function (d) {
+            return d.x * 5;
+          })
+          .attr("y", function (d) {
+            return d.y * 5;
+          })
+          .style("stroke", "black")
+          .style("stroke-width", ".2px")
+          .style("fill", function (d) {
+            var value = d.weight;
+            return scale(value);
+          });
+        // Question 5
+        maxString = d3.max(json.nodes, (d) => d.character.length);
+        var positionsPersonnages = d3.range(json.nodes.length); // un tableau d'autant d'element que de personnages
+        // [0, 1, ..., 106]
+        var echellexy = d3
+          .scaleBand()
+          .range([0, json.nodes.length]) // TODO correspond [0, largeur du dessin]
+          .domain(positionsPersonnages)
+          .paddingInner(0.1)
+          .align(0)
+          .round(true);
+
+        var echelley = d3
+          .scaleBand()
+          .range([0, (json.nodes.length * height) / json.nodes.length])
+          .domain(positionsPersonnages)
+          .paddingInner(0.1)
+          .align(0)
+          .round(false);
+
+        var echellex = d3
+          .scaleBand()
+          .range([0, (json.nodes.length * width) / json.nodes.length])
+          .domain(positionsPersonnages)
+          .paddingInner(0.1)
+          .align(0)
+          .round(false);
+
+        console.log(echellexy);
+
+        var labels = d3
+          .select("svg")
+          .append("g")
+          .attr(
+            "transform",
+            "translate(" + margin.top + "," + margin.left + ")"
+          )
+          .style("font-size", "8px")
+          .style("font-family", "sans-serif");
+
+        var columns = labels
+          .append("g")
+          .selectAll()
+          .data(json.nodes)
+          .join("text")
+          .attr("width", 5) //TODO
+          .attr("height", 5) //TODO
+          .attr("dx", function (d) {
+            return d.character.length;
+          })
+          .attr("dy", function (d) {
+            return echellex(d.id) + width / json.nodes.length / 2 + 2;
+          })
+          .attr("transform", "rotate(-90)")
+          .html((d) => {
+            return d.character;
+          }); // on tourne tout l'axe de 90°
+
+        var rows = labels
+          .append("g")
+          .selectAll()
+          .data(json.nodes)
+          .join("text")
+          .text((d) => d.character)
+          .attr("dx", -(maxString * 5)) //TODO
+          .attr(
+            "dy",
+            (d) => echelley(d.id) + height / json.nodes.length / 2 + 4
+          ); //TODO
+      })
+      .html((d) => {
+        return d.character;
       });
-
-      console.log(maxWeight);
-
-      var scale = d3
-        .scaleQuantize()
-        .domain([0, maxWeight]) // TODO
-        .range(d3.schemeBlues[9]);
-
-      // Question 4:
-      matrixViz = svg
-        .selectAll("rect")
-        .data(adjacencymatrix)
-        .join("rect")
-        .attr("width", 5) //TODO
-        .attr("height", 5) //TODO
-        .attr("x", function (d) {
-          return d.x * 5;
-        })
-        .attr("y", function (d) {
-          return d.y * 5;
-        })
-        .style("stroke", "black")
-        .style("stroke-width", ".2px")
-        .style("fill", function (d) {
-          var value = d.weight;
-          return scale(value);
-        });
-      // Question 5
-
-      var positionsPersonnages = d3.range(json.nodes.length); // un tableau d'autant d'element que de personnages
-      // [0, 1, ..., 106]
-      var echellexy = d3
-        .scaleBand()
-        .range([0, width]) // TODO correspond [0, largeur du dessin]
-        .domain(positionsPersonnages)
-        .paddingInner(0.1)
-        .align(0)
-        .round(true);
-
-      var labels = d3
-        .select("svg")
-        .append("g")
-        .attr("transform", "translate(60, 60)")
-        .style("font-size", "8px")
-        .style("font-family", "sans-serif");
-
-      var columns = labels
-        .append("g")
-        .selectAll()
-        .data(json.nodes)
-        .join("text")
-        .attr("width", 5) //TODO
-        .attr("height", 5) //TODO
-        .attr("x", function (d) {
-          return d.x * 5;
-        })
-        .attr("y", function (d) {
-          return d.y * 5;
-        })
-        .attr("transform", "rotate(-90)"); // on tourne tout l'axe de 90°
-
-      var rows = labels
-        .append("g")
-        .selectAll()
-        .data(json.nodes)
-        .join("text")
-        .text((d) => d.character)
-        .attr("width", 5) //TODO
-        .attr("height", 5) //TODO
-        .attr("x", function (d) {
-          return d.x * 5;
-        })
-        .attr("y", function (d) {
-          return d.y * 5;
-        });
-    });
 
     // donné par D3
   </script>
